@@ -1,0 +1,63 @@
+export function PageIntro({
+  index,
+  title,
+  description,
+  variant,
+}: {
+  index: string;
+  title: string;
+  description: string;
+  variant: "community" | "database" | "exhibitions" | "events";
+}) {
+  return (
+    <section className={`page-intro page-intro--${variant}`}>
+      <div className="page-index">{index}</div>
+      <div className="page-intro-copy">
+        <h1 data-text={title}>{title}</h1>
+        <p>{description}</p>
+      </div>
+      <IntroArtwork variant={variant} />
+    </section>
+  );
+}
+
+function IntroArtwork({ variant }: { variant: "community" | "database" | "exhibitions" | "events" }) {
+  if (variant === "community") {
+    return (
+      <div className="intro-art intro-community" aria-hidden="true">
+        <div className="collage-card collage-card-a"><small>POST 031</small><b>现在<br />播放</b><span>4:32</span></div>
+        <div className="collage-card collage-card-b"><small>OPEN NOTE</small><b>专辑<br />讨论</b><span>38 回复</span></div>
+        <div className="collage-card collage-card-c"><small>NEW DEMO</small><b>作品<br />交换</b><span>PLAY ↗</span></div>
+      </div>
+    );
+  }
+
+  if (variant === "database") {
+    return (
+      <div className="intro-art intro-database" aria-hidden="true">
+        <div className="archive-drawer drawer-a"><span>人物</span><b>001—042</b></div>
+        <div className="archive-drawer drawer-b"><span>流派</span><b>043—089</b></div>
+        <div className="archive-drawer drawer-c"><span>采样</span><b>090—128</b></div>
+        <div className="archive-disc"><i /></div>
+      </div>
+    );
+  }
+
+  if (variant === "exhibitions") {
+    return (
+      <div className="intro-art intro-exhibitions" aria-hidden="true">
+        <div className="frame frame-back"><span>002</span></div>
+        <div className="frame frame-mid"><span>OPEN<br />ROOM</span></div>
+        <div className="frame frame-front"><small>EXHIBITION 001</small><b>PABLO<br />/ KING</b></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="intro-art intro-events" aria-hidden="true">
+      <div className="event-ticket ticket-a"><small>AUG</small><b>24</b><span>LISTENING ROOM</span></div>
+      <div className="event-ticket ticket-b"><small>SEP</small><b>06</b><span>DEMO NIGHT</span></div>
+      <div className="event-orbit"><i /><span>LIVE</span></div>
+    </div>
+  );
+}
