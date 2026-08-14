@@ -4,7 +4,7 @@ Sunday Service CN 是面向中文用户的欧美音乐线上社群。本仓库�
 
 线上访问：https://sundayservicecn.com
 
-公开仓库：https://github.com/SHUJILAI/SS
+公开仓库：https://github.com/HongbaiJoe/sunday-service-cn
 
 ## 当前内容
 
