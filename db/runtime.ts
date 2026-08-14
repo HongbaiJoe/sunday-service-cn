@@ -52,9 +52,10 @@ async function initialize(db: D1Database) {
   await ensureTranslationColumns(db);
   await db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS users_phone_unique_idx ON users(phone)").run();
 
-  // 本地开发播种：仅在非生产环境写入，且一律 member 角色，绝不创建内置管理员。
+  // 本地开发默认播种；线上预览只有显式开启开关时才写入编辑部初始内容。
+  // 所有内置身份均为 member，绝不创建内置管理员。
   // 生产环境管理员通过 ADMIN_EMAILS 环境变量白名单提升（见 app/lib/auth.ts）。
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" || process.env.SEED_EDITORIAL_CONTENT === "true") {
     await db.batch([
       db.prepare(`INSERT OR IGNORE INTO users (id,email,display_name,username,role) VALUES ('seed-editor','editor@sundayservice.cn','SS/CN 编辑部','ssc-editor','member')`),
       db.prepare(`INSERT OR IGNORE INTO posts (id,author_id,title,body,tags,status) VALUES ('seed-kendrick','seed-editor','你会如何排列 Kendrick Lamar 的五张录音室专辑？','从叙事、制作和重听价值三个维度重新排列。欢迎给出你的版本与理由。','Kendrick Lamar,专辑讨论','published')`),
