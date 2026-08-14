@@ -15,7 +15,7 @@ export default function EventsPage() {
   return (
     <main>
       <SiteHeader />
-      <PageIntro index="04" title="活动" description="线上活动、线下聚会、音乐会同行与社区正在发生的事" variant="events" />
+      <PageIntro title="活动" description="线上活动、线下聚会、音乐会同行与社区正在发生的事" variant="events" />
       <section className="event-list">
         {events.map(([date, title, detail], index) => (
           <article key={title}>

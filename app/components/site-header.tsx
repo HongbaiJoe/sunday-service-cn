@@ -1,15 +1,16 @@
 import Link from "next/link";
+import { getCurrentUser } from "../lib/auth";
 
 const links = [
   ["首页", "/"],
-  ["社区", "/community"],
   ["资料库", "/database"],
   ["展厅", "/exhibitions"],
-  ["活动", "/events"],
   ["关于", "/about"],
 ] as const;
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const user = await getCurrentUser();
+
   return (
     <header className="site-header">
       <Link className="site-mark" href="/" aria-label="Sunday Service CN 首页">
@@ -22,7 +23,11 @@ export function SiteHeader() {
           </Link>
         ))}
       </nav>
-      <Link className="nav-action" href="/account">账户</Link>
+      {user ? (
+        <Link className="nav-action" href="/account">我的</Link>
+      ) : (
+        <Link className="nav-action" href="/login">登录/注册</Link>
+      )}
     </header>
   );
 }

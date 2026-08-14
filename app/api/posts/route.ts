@@ -1,6 +1,9 @@
 import { ensureDatabase, getD1 } from "../../../db/runtime";
-import { requireUser } from "../../lib/auth";
+import { assertTrustedOrigin, requireUser } from "../../lib/auth";
 import { inputErrorResponse, json, optionalText, optionalUrl, requiredText } from "../../lib/http";
+import { moderateContent } from "../../lib/moderation";
+import { log } from "../../lib/log";
+import { CONTENT_MAX_PER_WINDOW, CONTENT_WINDOW_MS, rateLimitAllow } from "../../lib/security";
 
 export async function GET() {
   try {
@@ -12,11 +15,31 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await assertTrustedOrigin();
     const user = await requireUser();
     const body = await request.json() as Record<string, unknown>;
+    const title = requiredText(body.title, "标题", 120);
+    const postBody = requiredText(body.body, "正文", 5000);
+    const tags = optionalText(body.tags, 240) ?? "";
+    const mediaUrl = optionalUrl(body.mediaUrl);
+
+    // 内容限频：同一用户 10 分钟内最多发 5 条内容（防灌水）
+    await ensureDatabase();
+    const db = getD1();
+    const allowed = await rateLimitAllow(db, "content_post", user.id, CONTENT_MAX_PER_WINDOW, CONTENT_WINDOW_MS);
+    if (!allowed) {
+      log("posts.create", { userId: user.id, result: "rate_limited" }, "warn");
+      return json({ error: "发布太频繁，请稍后再试" }, 429);
+    }
+
+    // 内容审核：任何登录用户发布的内容在入库前必须先通过屏蔽词检测
+    const moderation = moderateContent(title, postBody, tags);
+    if (!moderation.passed) return json({ error: moderation.message }, 400);
+
     const id = crypto.randomUUID();
-    await getD1().prepare("INSERT INTO posts (id,author_id,title,body,tags,media_url) VALUES (?,?,?,?,?,?)")
-      .bind(id, user.id, requiredText(body.title, "标题", 120), requiredText(body.body, "正文", 5000), optionalText(body.tags, 240) ?? "", optionalUrl(body.mediaUrl)).run();
+    await db.prepare("INSERT INTO posts (id,author_id,title,body,tags,media_url) VALUES (?,?,?,?,?,?)")
+      .bind(id, user.id, title, postBody, tags, mediaUrl).run();
+    log("posts.create", { userId: user.id, postId: id, result: "success" });
     return json({ id, status: "published" }, 201);
   } catch (error) { return inputErrorResponse(error); }
 }

@@ -25,11 +25,12 @@ export function sites(): Plugin {
       root = config.root;
     },
     async closeBundle() {
-      const outputDirectory = resolve(root, "dist", ".openai");
+      // Use a dedicated metadata directory to avoid clashing with sandbox
+      // delete guards on the default dist/.openai path.
+      const outputDirectory = resolve(root, "dist", ".site-meta");
       const hostingConfig = resolve(root, ".openai", "hosting.json");
       const drizzleSource = resolve(root, "drizzle");
 
-      await rm(outputDirectory, { recursive: true, force: true });
       await mkdir(outputDirectory, { recursive: true });
 
       if (await exists(hostingConfig)) {

@@ -1,6 +1,9 @@
 import { ensureDatabase, getD1 } from "../../../db/runtime";
-import { requireUser } from "../../lib/auth";
+import { assertTrustedOrigin, requireUser } from "../../lib/auth";
 import { inputErrorResponse, json, requiredText } from "../../lib/http";
+import { moderateText } from "../../lib/moderation";
+import { log } from "../../lib/log";
+import { CONTENT_MAX_PER_WINDOW, CONTENT_WINDOW_MS, rateLimitAllow } from "../../lib/security";
 
 export async function GET(request: Request) {
   try {
@@ -14,14 +17,33 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await assertTrustedOrigin();
     const user = await requireUser();
     const body = await request.json() as Record<string, unknown>;
     const postId = requiredText(body.postId, "帖子编号", 80);
-    const exists = await getD1().prepare("SELECT id FROM posts WHERE id = ? AND status = 'published'").bind(postId).first();
+
+    await ensureDatabase();
+    const db = getD1();
+
+    // 内容限频：同一用户 10 分钟内最多 5 条（与发帖共用窗口，防灌水）
+    const allowed = await rateLimitAllow(db, "content_post", user.id, CONTENT_MAX_PER_WINDOW, CONTENT_WINDOW_MS);
+    if (!allowed) {
+      log("comments.create", { userId: user.id, result: "rate_limited" }, "warn");
+      return json({ error: "回复太频繁，请稍后再试" }, 429);
+    }
+
+    const exists = await db.prepare("SELECT id FROM posts WHERE id = ? AND status = 'published'").bind(postId).first();
     if (!exists) return json({ error: "帖子不存在" }, 404);
+    const commentBody = requiredText(body.body, "回复", 1200);
+
+    // 内容审核：评论在入库前必须先通过屏蔽词检测
+    const moderation = moderateText(commentBody);
+    if (!moderation.passed) return json({ error: moderation.message }, 400);
+
     const id = crypto.randomUUID();
-    await getD1().prepare("INSERT INTO comments (id,post_id,author_id,body) VALUES (?,?,?,?)")
-      .bind(id, postId, user.id, requiredText(body.body, "回复", 1200)).run();
+    await db.prepare("INSERT INTO comments (id,post_id,author_id,body) VALUES (?,?,?,?)")
+      .bind(id, postId, user.id, commentBody).run();
+    log("comments.create", { userId: user.id, commentId: id, postId, result: "success" });
     return json({ id, status: "published" }, 201);
   } catch (error) { return inputErrorResponse(error); }
 }

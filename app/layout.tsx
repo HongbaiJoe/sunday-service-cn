@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: "Sunday Service CN",
     template: "%s — Sunday Service CN",
   },
-  description: "中国最大的黑人音乐社群",
+  description: "中国最大的欧美音乐社群",
 };
 
 export default function RootLayout({

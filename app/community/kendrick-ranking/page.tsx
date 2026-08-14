@@ -2,10 +2,12 @@
 import Link from "next/link";
 import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
+import { getSiteAssets } from "../../lib/site-assets";
 
 export const metadata = { title: "Kendrick Lamar 专辑排序" };
 
-export default function PostPage() {
+export default async function PostPage() {
+  const assets = await getSiteAssets();
   return (
     <main>
       <SiteHeader />
@@ -14,7 +16,7 @@ export default function PostPage() {
         <p className="eyebrow"># KENDRICK LAMAR · 专辑讨论</p>
         <h1>你会如何排列 Kendrick Lamar 的五张录音室专辑？</h1>
         <div className="post-byline">李默 · 2026.08.10 · 8 分钟阅读</div>
-        <img src="/images/kendrick-lamar.jpg" alt="Kendrick Lamar 肖像" width="989" height="1318" />
+        <img src={assets["archive.kendrick"].url} alt={assets["archive.kendrick"].alt} width="989" height="1318" />
         <div className="post-copy">
           <p>我最近重新完整听了一遍 Kendrick Lamar 的录音室作品。这里不是一份“客观榜单”，而是从叙事完整度、制作细节与重听价值出发的一次个人排序。</p>
           <h2>01 · To Pimp a Butterfly</h2>

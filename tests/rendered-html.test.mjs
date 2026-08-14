@@ -10,10 +10,15 @@ let server;
 let serverOutput = "";
 
 before(async () => {
-  server = spawn("./node_modules/.bin/vinext", ["dev", "--port", String(port), "--hostname", "127.0.0.1"], {
+  // 跨平台启动：Windows 下 node_modules/.bin/vinext 是 .cmd 包装器，spawn 需带 shell: true；
+  // cmd 把 "/" 当参数开关且不识别 "./" 前缀，因此 Windows 必须用反斜杠路径。
+  const isWin = process.platform === "win32";
+  const vinextBin = isWin ? "node_modules\\.bin\\vinext" : "node_modules/.bin/vinext";
+  server = spawn(vinextBin, ["dev", "--port", String(port), "--hostname", "127.0.0.1"], {
     cwd: new URL("../", import.meta.url),
     env: { ...process.env, WRANGLER_LOG_PATH: ".wrangler/wrangler-test.log" },
     stdio: ["ignore", "pipe", "pipe"],
+    ...(isWin ? { shell: true } : {}),
   });
   server.stdout.on("data", (chunk) => { serverOutput += chunk; });
   server.stderr.on("data", (chunk) => { serverOutput += chunk; });
@@ -29,7 +34,15 @@ before(async () => {
 });
 
 after(() => {
-  server?.kill("SIGTERM");
+  if (!server) return;
+  // 忽略 kill 后的 ESRCH 等错误事件
+  server.on("error", () => {});
+  if (process.platform === "win32") {
+    // Windows 下 SIGTERM 只杀 cmd 包装器，需用 taskkill /T 结束整棵进程树
+    spawn("taskkill", ["/pid", String(server.pid), "/T", "/F"], { stdio: "ignore" });
+  } else {
+    server.kill("SIGTERM");
+  }
 });
 
 async function render(pathname = "/") {
@@ -44,7 +57,7 @@ test("server-renders the Sunday Service CN homepage", async () => {
   const html = await response.text();
   assert.match(html, /<html lang="zh-CN">/);
   assert.match(html, /<title>Sunday Service CN<\/title>/i);
-  assert.match(html, /中国最大的黑人音乐社群/);
+  assert.match(html, /中国最大的欧美音乐社群/);
   assert.match(html, />SUNDAY</);
   assert.match(html, />SERVICE CN</);
   assert.match(html, /Kendrick Lamar/);
@@ -93,7 +106,7 @@ test("keeps the product contract and data bindings in source control", async () 
     readFile(new URL("../app/components/member-access-form.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /<InteractiveHero \/>/);
+  assert.match(page, /<InteractiveHero heroUrl=/);
   assert.match(layout, /lang="zh-CN"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.match(prd, /单一中文界面/);

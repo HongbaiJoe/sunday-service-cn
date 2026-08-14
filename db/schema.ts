@@ -15,6 +15,7 @@ export const users = sqliteTable("users", {
   username: text("username").notNull(),
   bio: text("bio").notNull().default(""),
   avatarUrl: text("avatar_url"),
+  passwordHash: text("password_hash"),
   role: text("role", { enum: ["member", "admin"] }).notNull().default("member"),
   status: text("status", { enum: ["active", "suspended"] }).notNull().default("active"),
   ...timestamps,
@@ -63,6 +64,7 @@ export const libraryEntries = sqliteTable("library_entries", {
   body: text("body").notNull(),
   sourceUrl: text("source_url"),
   mediaUrl: text("media_url"),
+  blocks: text("blocks"),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   reviewerNote: text("reviewer_note").notNull().default(""),
   reviewedBy: text("reviewed_by").references(() => users.id),
@@ -78,6 +80,7 @@ export const exhibitions = sqliteTable("exhibitions", {
   curatorialStatement: text("curatorial_statement").notNull(),
   externalUrl: text("external_url"),
   coverUrl: text("cover_url"),
+  blocks: text("blocks"),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   reviewerNote: text("reviewer_note").notNull().default(""),
   reviewedBy: text("reviewed_by").references(() => users.id),
@@ -94,3 +97,32 @@ export const adminActions = sqliteTable("admin_actions", {
   note: text("note").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("admin_actions_entity_idx").on(table.entityType, table.entityId)]);
+
+export const smsCodes = sqliteTable("sms_codes", {
+  id: text("id").primaryKey(),
+  phone: text("phone"),
+  email: text("email"),
+  channel: text("channel").notNull().default("phone"),
+  code: text("code").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  used: integer("used").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("sms_codes_phone_idx").on(table.phone, table.createdAt),
+  index("sms_codes_email_idx").on(table.email, table.createdAt),
+]);
+
+export const sessions = sqliteTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  lastSeenAt: text("last_seen_at"),
+}, (table) => [index("sessions_user_idx").on(table.userId)]);
+
+export const siteAssets = sqliteTable("site_assets", {
+  key: text("key").primaryKey(),
+  url: text("url").notNull(),
+  alt: text("alt").notNull().default(""),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

@@ -2,17 +2,24 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { uploadMedia } from "../lib/client-upload";
 
 type Post = { id: string; title: string; body: string; tags: string; mediaUrl?: string | null; createdAt: string; author: string; username: string; commentCount: number };
 type Session = { user: null | { displayName: string } };
+
+const DRAFT_KEY = "sscn_draft_community_post";
 
 export function CommunityHub() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [tags, setTags] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function load() {
     const [postResponse, sessionResponse] = await Promise.all([fetch("/api/posts", { cache: "no-store" }), fetch("/api/session", { cache: "no-store" })]);
@@ -25,34 +32,58 @@ export function CommunityHub() {
     return () => { active = false; };
   }, []);
 
+  // 恢复未发布的文字草稿（登录回跳后）
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw) as { title?: string; body?: string; tags?: string };
+        if (draft.title) setTitle(draft.title);
+        if (draft.body) setBody(draft.body);
+        if (draft.tags) setTags(draft.tags);
+      }
+    } catch { /* 忽略损坏的草稿 */ }
+  }, []);
+
   async function publish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true); setMessage("");
-    const form = new FormData(event.currentTarget);
+    if (!session?.user) {
+      // 未登录：先保存文字草稿再去登录，登录后回到本页继续
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body, tags }));
+      setBusy(false);
+      window.location.assign("/login?returnTo=/community");
+      return;
+    }
     let mediaUrl: string | null = null;
-    const file = form.get("file");
-    if (file instanceof File && file.size > 0) {
+    if (file && file.size > 0) {
       try { mediaUrl = (await uploadMedia(file)).url ?? null; }
       catch (error) { setMessage(error instanceof Error ? error.message : "媒体上传失败"); setBusy(false); return; }
     }
-    const response = await fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: form.get("title"), body: form.get("body"), tags: form.get("tags"), mediaUrl }) });
+    const response = await fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title, body, tags, mediaUrl }) });
     const data = await response.json() as { error?: string };
     setMessage(response.ok ? "帖子已发布" : data.error ?? "发布失败");
-    if (response.ok) { event.currentTarget.reset(); await load(); }
+    if (response.ok) {
+      setTitle(""); setBody(""); setTags(""); setFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      localStorage.removeItem(DRAFT_KEY);
+      await load();
+    }
     setBusy(false);
   }
 
   return (
     <>
       <section className="composer-wrap">
-        {session?.user ? <form className="composer real-composer" onSubmit={publish}>
+        <form className="composer real-composer" onSubmit={publish}>
           <label htmlFor="post-title">现在想聊什么？</label>
-          <input id="post-title" name="title" placeholder="帖子标题" required maxLength={120} />
-          <textarea name="body" placeholder="写下你的看法、评分或创作过程……" rows={5} required maxLength={5000} />
-          <div className="composer-fields"><input name="tags" placeholder="标签，用逗号分隔" maxLength={240} /><label className="file-button">＋ 图片 / 视频 / 音频<input name="file" type="file" accept="image/*,video/*,audio/*" /></label></div>
-          <button className="system-button inverse" disabled={busy}>{busy ? "正在发布…" : "发布帖子"}</button>
+          <input id="post-title" name="title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="帖子标题" required maxLength={120} />
+          <textarea name="body" value={body} onChange={(event) => setBody(event.target.value)} placeholder="写下你的看法、评分或创作过程……" rows={5} required maxLength={5000} />
+          <div className="composer-fields"><input name="tags" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="标签，用逗号分隔" maxLength={240} />{session?.user ? <label className="file-button">＋ 图片 / 视频 / 音频<input ref={fileRef} name="file" type="file" accept="image/*,video/*,audio/*" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label> : null}</div>
+          <button className="system-button inverse" disabled={busy}>{busy ? "正在发布…" : session?.user ? "发布帖子" : "登录后发布"}</button>
+          {!session?.user ? <p className="form-hint">可以先写内容，发布时会带你登录，文字草稿不会丢失。</p> : null}
           {message ? <p className="form-message" aria-live="polite">{message}</p> : null}
-        </form> : <div className="composer-login"><h2>登录后发表内容</h2><p>帖子会保存到社区数据库，也可以附带图片、视频或音频。</p><Link className="system-button inverse" href="/account">登录 / 注册 ↗</Link></div>}
+        </form>
       </section>
 
       <section className="live-feed" aria-label="社区帖子">

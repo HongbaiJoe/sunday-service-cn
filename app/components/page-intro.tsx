@@ -1,44 +1,33 @@
+import { DatabaseSearch } from "./database-search";
+
 export function PageIntro({
-  index,
   title,
   description,
   variant,
 }: {
-  index: string;
   title: string;
-  description: string;
+  description?: string;
   variant: "community" | "database" | "exhibitions" | "events";
 }) {
   return (
     <section className={`page-intro page-intro--${variant}`}>
-      <div className="page-index">{index}</div>
+      <div className="page-index" aria-hidden="true">{" "}</div>
       <div className="page-intro-copy">
         <h1 data-text={title}>{title}</h1>
-        <p>{description}</p>
+        {description ? <p>{description}</p> : null}
       </div>
-      <IntroArtwork variant={variant} />
+      {variant === "database" ? <DatabaseSearch /> : <IntroArtwork variant={variant} />}
     </section>
   );
 }
 
-function IntroArtwork({ variant }: { variant: "community" | "database" | "exhibitions" | "events" }) {
+function IntroArtwork({ variant }: { variant: "community" | "exhibitions" | "events" }) {
   if (variant === "community") {
     return (
       <div className="intro-art intro-community" aria-hidden="true">
         <div className="collage-card collage-card-a"><small>POST 031</small><b>现在<br />播放</b><span>4:32</span></div>
         <div className="collage-card collage-card-b"><small>OPEN NOTE</small><b>专辑<br />讨论</b><span>38 回复</span></div>
         <div className="collage-card collage-card-c"><small>NEW DEMO</small><b>作品<br />交换</b><span>PLAY ↗</span></div>
-      </div>
-    );
-  }
-
-  if (variant === "database") {
-    return (
-      <div className="intro-art intro-database" aria-hidden="true">
-        <div className="archive-drawer drawer-a"><span>人物</span><b>001—042</b></div>
-        <div className="archive-drawer drawer-b"><span>流派</span><b>043—089</b></div>
-        <div className="archive-drawer drawer-c"><span>采样</span><b>090—128</b></div>
-        <div className="archive-disc"><i /></div>
       </div>
     );
   }

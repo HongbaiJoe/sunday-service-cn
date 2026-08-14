@@ -1,10 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 import { SiteFooter } from "../components/site-footer";
 import { SiteHeader } from "../components/site-header";
+import { getSiteAssets } from "../lib/site-assets";
 
 export const metadata = { title: "关于" };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const assets = await getSiteAssets();
   return (
     <main>
       <SiteHeader />
@@ -19,19 +21,19 @@ export default function AboutPage() {
       </section>
       <section className="about-photos" aria-label="Sunday Service CN 现场照片">
         <figure className="about-photo about-photo-main">
-          <img src="/images/about-blue-light-zine.png" alt="蓝色投影与装置现场的纸刊拼贴作品" width="971" height="1619" />
-          <figcaption>01 · BLUE LIGHT, GATHERED</figcaption>
+          <img src={assets["about.blueLight"].url} alt={assets["about.blueLight"].alt} width="971" height="1619" />
+          <figcaption>BLUE LIGHT, GATHERED</figcaption>
         </figure>
         <figure className="about-photo about-photo-side">
-          <img src="/images/about-sunday-wall-zine.png" alt="Sunday Service Shenzhen 海报墙的纸刊拼贴作品" width="971" height="1619" />
-          <figcaption>02 · VOICES BECOME A ROOM</figcaption>
+          <img src={assets["about.wall"].url} alt={assets["about.wall"].alt} width="971" height="1619" />
+          <figcaption>VOICES BECOME A ROOM</figcaption>
         </figure>
         <p className="about-photo-note">Community<br />Memory</p>
       </section>
       <section className="about-grid">
-        <div><span>01</span><h2>讨论</h2><p>从一张新专辑，到一段现场录音，再到一套完整的音乐研究。</p></div>
-        <div><span>02</span><h2>分享</h2><p>发布自己的声音、图片、视频和创作过程。</p></div>
-        <div><span>03</span><h2>展览</h2><p>独立展览拥有自己的空间，主网站负责连接观众与策展人。</p></div>
+        <div><h2>讨论</h2><p>从一张新专辑，到一段现场录音，再到一套完整的音乐研究。</p></div>
+        <div><h2>分享</h2><p>发布自己的声音、图片、视频和创作过程。</p></div>
+        <div><h2>展览</h2><p>独立展览拥有自己的空间，主网站负责连接观众与策展人。</p></div>
       </section>
       <SiteFooter />
     </main>

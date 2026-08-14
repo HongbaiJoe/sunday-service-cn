@@ -45,21 +45,26 @@ export function AccountDashboard() {
     await load();
   }
 
+  async function signOutSession() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    await load();
+  }
+
   if (!session) return <div className="system-loading">正在读取账户…</div>;
   if (!session.user) return (
     <section className="account-gate">
       <p className="eyebrow">MEMBER ACCESS · 用户系统</p>
       <h2>登录后参与讨论、提交资料与申请展览。</h2>
-      <div className="account-entry-buttons"><Link className="system-button" href="/login">邮箱或手机号登录</Link><Link className="system-button secondary" href="/register">注册成员</Link></div>
+      <div className="account-entry-buttons"><Link className="system-button" href="/login">邮箱登录</Link><Link className="system-button secondary" href="/register">注册成员</Link></div>
       {!session.developmentPreview ? <a className="text-link" href={session.signInPath}>使用平台账户安全登录 ↗</a> : null}
       {session.developmentPreview ? <div className="dev-preview"><p>本地快速测试入口</p><button onClick={() => preview("member")}>默认成员</button><button onClick={() => preview("admin")}>管理员</button></div> : null}
     </section>
   );
 
-  return <ProfileEditor key={`${session.user.email}-${session.user.avatarUrl}`} user={session.user} developmentPreview={session.developmentPreview} signOutPath={session.signOutPath} onSaved={load} onPreviewSignOut={signOutPreview} />;
+  return <ProfileEditor key={`${session.user.email}-${session.user.avatarUrl}`} user={session.user} developmentPreview={session.developmentPreview} signOutPath={session.signOutPath} onSaved={load} onPreviewSignOut={signOutPreview} onSessionSignOut={signOutSession} />;
 }
 
-function ProfileEditor({ user, developmentPreview, signOutPath, onSaved, onPreviewSignOut }: { user: User; developmentPreview: boolean; signOutPath: string; onSaved: () => Promise<void>; onPreviewSignOut: () => Promise<void> }) {
+function ProfileEditor({ user, developmentPreview, signOutPath, onSaved, onPreviewSignOut, onSessionSignOut }: { user: User; developmentPreview: boolean; signOutPath: string; onSaved: () => Promise<void>; onPreviewSignOut: () => Promise<void>; onSessionSignOut: () => Promise<void> }) {
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -67,7 +72,8 @@ function ProfileEditor({ user, developmentPreview, signOutPath, onSaved, onPrevi
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const payload = { ...Object.fromEntries(form), avatarUrl };
+    // 用户名即显示名称：只提交 displayName，后端会同步 username
+    const payload = { displayName: form.get("displayName"), bio: form.get("bio"), avatarUrl };
     const response = await fetch("/api/profile", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
     const result = await response.json() as { error?: string };
     setMessage(response.ok ? "资料已保存" : result.error ?? "保存失败");
@@ -95,14 +101,12 @@ function ProfileEditor({ user, developmentPreview, signOutPath, onSaved, onPrevi
         <p className="eyebrow">SIGNED IN · 已登录</p>
         <div className="profile-heading">
           <div className="profile-avatar">{avatarUrl ? <img src={avatarUrl} alt={`${user.displayName} 的头像`} /> : <span>{user.displayName.slice(0, 1)}</span>}</div>
-          <div><h2>{user.displayName}</h2><p>@{user.username} · {user.role === "admin" ? "管理员" : "社区成员"}</p></div>
+          <div><h2>{user.displayName}</h2><p>{user.role === "admin" ? "管理员" : "社区成员"}</p></div>
         </div>
         <form className="system-form" onSubmit={save}>
           <label className="avatar-upload">头像<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={chooseAvatar} disabled={uploading} /><span>{uploading ? "上传中…" : "选择图片"}</span></label>
-          <label>显示名称<input name="displayName" defaultValue={user.displayName} required maxLength={50} /></label>
-          <label>用户名<input name="username" defaultValue={user.username} required maxLength={32} /></label>
+          <label>用户名（社区中展示的名字）<input name="displayName" defaultValue={user.displayName} required maxLength={24} /></label>
           <label>登录邮箱<input value={user.email} readOnly aria-readonly="true" /></label>
-          <label>手机号<input name="phone" defaultValue={user.phone} inputMode="tel" placeholder="例如 +86 138 0000 0000" /><small>{user.phoneVerified ? "手机号已验证" : "保存后仍需通过短信验证才能用于正式登录"}</small></label>
           <label>个人简介<textarea name="bio" defaultValue={user.bio} rows={4} maxLength={280} /></label>
           <button type="submit" disabled={uploading}>保存个人资料</button>
           {message ? <p className="form-message" aria-live="polite">{message}</p> : null}
@@ -114,7 +118,7 @@ function ProfileEditor({ user, developmentPreview, signOutPath, onSaved, onPrevi
         <Link href="/submit/library">提交资料库内容 ↗</Link>
         <Link href="/submit/exhibition">申请线上展览 ↗</Link>
         {user.role === "admin" ? <Link href="/admin">进入管理员后台 ↗</Link> : null}
-        {developmentPreview ? <button onClick={onPreviewSignOut}>退出本地预览身份</button> : <a href={signOutPath}>退出登录</a>}
+        {developmentPreview ? <button className="sign-out-button" onClick={onPreviewSignOut}>退出本地预览身份</button> : <button className="sign-out-button" onClick={onSessionSignOut}>退出登录</button>}
       </aside>
     </div>
   );

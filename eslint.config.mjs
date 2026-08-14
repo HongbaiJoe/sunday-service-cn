@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Build/CLI artifacts (wrangler deploy temp bundles are not source):
+    ".wrangler/**",
+    "dist/**",
   ]),
 ]);
 

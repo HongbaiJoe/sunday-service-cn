@@ -17,6 +17,11 @@ const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
 
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
+  // 安全：oai-* 请求头是 ChatGPT 托管网关注入的信任凭据。
+  // 只有显式配置 CHATGPT_GATEWAY_ENABLED=1（即部署形态确为 ChatGPT 托管网关）时才信任，
+  // 否则任何客户端都可伪造 oai-authenticated-user-email 头冒充任意用户/提权。
+  if (process.env.CHATGPT_GATEWAY_ENABLED !== "1") return null;
+
   const requestHeaders = await headers();
   const email = requestHeaders.get(USER_EMAIL_HEADER);
   if (!email) return null;

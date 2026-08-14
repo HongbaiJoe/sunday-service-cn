@@ -1,6 +1,7 @@
 import { ensureDatabase, getD1 } from "../../../../db/runtime";
-import { requireAdmin } from "../../../lib/auth";
+import { assertTrustedOrigin, requireAdmin } from "../../../lib/auth";
 import { inputErrorResponse, json, optionalText, requiredText } from "../../../lib/http";
+import { log } from "../../../lib/log";
 
 export async function GET() {
   try {
@@ -20,6 +21,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
+    await assertTrustedOrigin();
     const admin = await requireAdmin();
     const body = await request.json() as Record<string, unknown>;
     const entityType = requiredText(body.entityType, "对象类型", 30);
@@ -53,6 +55,7 @@ export async function PATCH(request: Request) {
 
     await db.prepare("INSERT INTO admin_actions (id,admin_id,entity_type,entity_id,action,note) VALUES (?,?,?,?,?,?)")
       .bind(crypto.randomUUID(), admin.id, entityType, entityId, action, note).run();
+    log("admin.review", { adminId: admin.id, entityType, entityId, action, result: "success" });
     return json({ ok: true });
   } catch (error) { return inputErrorResponse(error); }
 }

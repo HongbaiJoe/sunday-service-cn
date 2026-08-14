@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 
-export function InteractiveHero() {
+export function InteractiveHero({ heroUrl }: { heroUrl: string }) {
   const heroRef = useRef<HTMLElement>(null);
 
   function moveTitle(event: React.PointerEvent<HTMLElement>) {
@@ -26,14 +26,12 @@ export function InteractiveHero() {
       onPointerLeave={resetTitle}
       aria-labelledby="hero-title"
     >
-      <div className="hero-vinyl" aria-hidden="true">
-        <span className="vinyl-label">JIK</span>
-      </div>
+      <img className="hero-vinyl" src={heroUrl} alt="" aria-hidden="true" />
       <h1 id="hero-title" className="hero-title">
         <span className="hero-line hero-line-one">SUNDAY</span>
         <span className="hero-line hero-line-two">SERVICE CN</span>
       </h1>
-      <p className="hero-caption">中国最大的黑人音乐社群</p>
+      <p className="hero-caption">中国最大的欧美音乐社群</p>
       <a className="scroll-cue" href="#latest" aria-label="向下浏览">
         <span>SCROLL</span>
         <span aria-hidden="true">↓</span>

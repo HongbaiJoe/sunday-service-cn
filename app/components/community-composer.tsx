@@ -53,7 +53,7 @@ export function CommunityComposer() {
 
       {posts.map((post) => (
         <article className="prototype-post" key={post.id}>
-          <span>刚刚发布 · 本地原型</span>
+          <span>刚刚发布</span>
           <p>{post.text}</p>
           {post.fileName ? <small>附件：{post.fileName}</small> : null}
         </article>
