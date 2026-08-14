@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     await ensureDatabase();
     const postId = new URL(request.url).searchParams.get("postId");
     if (!postId) return json({ error: "缺少帖子编号" }, 400);
-    const result = await getD1().prepare(`SELECT comments.id, comments.body, comments.created_at AS createdAt, users.display_name AS author FROM comments JOIN users ON users.id = comments.author_id WHERE comments.post_id = ? AND comments.status = 'published' ORDER BY comments.created_at ASC`).bind(postId).all();
+    const result = await getD1().prepare(`SELECT comments.id, comments.body, comments.body_en AS bodyEn, comments.created_at AS createdAt, users.display_name AS author FROM comments JOIN users ON users.id = comments.author_id WHERE comments.post_id = ? AND comments.status = 'published' ORDER BY comments.created_at ASC`).bind(postId).all();
     return json({ comments: result.results });
   } catch (error) { return inputErrorResponse(error); }
 }

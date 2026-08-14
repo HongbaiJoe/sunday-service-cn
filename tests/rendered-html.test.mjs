@@ -16,7 +16,7 @@ before(async () => {
   const vinextBin = isWin ? "node_modules\\.bin\\vinext" : "node_modules/.bin/vinext";
   server = spawn(vinextBin, ["dev", "--port", String(port), "--hostname", "127.0.0.1"], {
     cwd: new URL("../", import.meta.url),
-    env: { ...process.env, WRANGLER_LOG_PATH: ".wrangler/wrangler-test.log" },
+    env: { ...process.env, NEXT_PUBLIC_COMMUNITY_ENABLED: "true", WRANGLER_LOG_PATH: ".wrangler/wrangler-test.log" },
     stdio: ["ignore", "pipe", "pipe"],
     ...(isWin ? { shell: true } : {}),
   });

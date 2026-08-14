@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo_Black, Geist } from "next/font/google";
 import "./globals.css";
+import { LocaleProvider } from "./components/locale-provider";
 
 const bodyFont = Geist({
   variable: "--font-body",
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className={`${bodyFont.variable} ${displayFont.variable}`}>
-        {children}
+        <LocaleProvider>{children}</LocaleProvider>
       </body>
     </html>
   );

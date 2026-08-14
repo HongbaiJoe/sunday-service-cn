@@ -8,7 +8,7 @@ import { CONTENT_MAX_PER_WINDOW, CONTENT_WINDOW_MS, rateLimitAllow } from "../..
 export async function GET() {
   try {
     await ensureDatabase();
-    const result = await getD1().prepare(`SELECT exhibitions.id, title, summary, curatorial_statement AS curatorialStatement, external_url AS externalUrl, cover_url AS coverUrl, exhibitions.updated_at AS updatedAt, users.display_name AS curator FROM exhibitions JOIN users ON users.id = exhibitions.owner_id WHERE exhibitions.status = 'approved' ORDER BY exhibitions.updated_at DESC`).all();
+    const result = await getD1().prepare(`SELECT exhibitions.id, title, summary, curatorial_statement AS curatorialStatement, title_en AS titleEn, summary_en AS summaryEn, curatorial_statement_en AS curatorialStatementEn, external_url AS externalUrl, cover_url AS coverUrl, exhibitions.updated_at AS updatedAt, users.display_name AS curator FROM exhibitions JOIN users ON users.id = exhibitions.owner_id WHERE exhibitions.status = 'approved' ORDER BY exhibitions.updated_at DESC`).all();
     return json({ exhibitions: result.results });
   } catch (error) { return inputErrorResponse(error); }
 }

@@ -6,8 +6,8 @@ const DEFAULTS: Record<string, { url: string; alt: string }> = {
   "about.blueLight": { url: "/images/about-blue-light-zine.webp", alt: "蓝色投影与装置现场的纸刊拼贴作品" },
   "about.wall": { url: "/images/about-sunday-wall-zine.webp", alt: "Sunday Service Shenzhen 海报墙的纸刊拼贴作品" },
   "archive.kendrick": { url: "/images/kendrick-lamar.webp", alt: "Kendrick Lamar 肖像" },
-  "archive.kanye": { url: "/images/kanye-west.webp", alt: "Kanye West 演出照片" },
-  "archive.lauryn": { url: "/images/lauryn-hill.webp", alt: "Lauryn Hill 演出照片" },
+  "archive.kanye": { url: "/images/kanye-west-cutout.webp", alt: "Kanye West 演出人物抠图" },
+  "archive.lauryn": { url: "/images/lauryn-hill-cutout.webp", alt: "Lauryn Hill 演出人物抠图" },
   "submit.libraryBg": { url: "/api/media/file/uploads/site-assets/submit.libraryBg/vinyl-rack.png", alt: "" },
 };
 
@@ -22,6 +22,16 @@ export const SITE_ASSET_LABELS: Record<string, string> = {
   "archive.kanye": "人物专题 · Kanye West",
   "archive.lauryn": "人物专题 · Lauryn Hill",
   "submit.libraryBg": "提交资料页 · 背景图",
+};
+
+export const SITE_ASSET_LABELS_EN: Record<string, string> = {
+  "home.hero": "Homepage vinyl record",
+  "about.blueLight": "About · Blue-light collage",
+  "about.wall": "About · Poster-wall collage",
+  "archive.kendrick": "Artist feature · Kendrick Lamar",
+  "archive.kanye": "Artist feature · Kanye West",
+  "archive.lauryn": "Artist feature · Lauryn Hill",
+  "submit.libraryBg": "Archive submission · Background",
 };
 
 export const SITE_ASSET_DEFAULTS = DEFAULTS;

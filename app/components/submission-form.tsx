@@ -1,15 +1,19 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { uploadMedia } from "../lib/client-upload";
 import { RichEditor, EditorToolbar, EditorCanvas } from "./rich-editor";
 import { DEFAULT_ARTICLE_BACKGROUND, htmlToText, type ArticleContent } from "../lib/blocks";
+import { useLocale } from "./locale-provider";
 
-const LIBRARY_CATEGORIES = ["歌曲", "人物", "档案", "流派", "课程", "原创"];
+const LIBRARY_CATEGORIES = [["歌曲", "Songs"], ["人物", "Artists"], ["档案", "Archives"], ["流派", "Genres"], ["课程", "Courses"], ["原创", "Originals"]] as const;
 
 const EMPTY_CONTENT: ArticleContent = { version: 3, html: "", background: DEFAULT_ARTICLE_BACKGROUND, floats: [] };
 
 export function SubmissionForm({ type }: { type: "library" | "exhibition" }) {
+  const router = useRouter();
+  const { t, translateMessage } = useLocale();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,6 +31,7 @@ export function SubmissionForm({ type }: { type: "library" | "exhibition" }) {
 
   // 展览封面图本地预览（选择文件后生成临时 URL，更换/卸载时释放）
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- object URL lifecycle follows the selected file
     if (!file) { setCoverPreviewUrl(null); return; }
     const objectUrl = URL.createObjectURL(file);
     setCoverPreviewUrl(objectUrl);
@@ -41,6 +46,7 @@ export function SubmissionForm({ type }: { type: "library" | "exhibition" }) {
       const raw = localStorage.getItem(draftKey);
       if (raw) {
         const draft = JSON.parse(raw) as { category?: string; title?: string; summary?: string; content?: ArticleContent; url?: string };
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- restore a browser-only draft after hydration
         if (draft.category) setCategory(draft.category);
         if (draft.title) setTitle(draft.title);
         if (draft.summary) setSummary(draft.summary);
@@ -55,7 +61,7 @@ export function SubmissionForm({ type }: { type: "library" | "exhibition" }) {
     if (!signedIn) {
       localStorage.setItem(draftKey, JSON.stringify({ category, title, summary, content, url }));
       setBusy(false);
-      window.location.assign(`/login?returnTo=/submit/${type}`);
+      router.push(`/login?returnTo=/submit/${type}`);
       return;
     }
     if (type === "library" && !category) { setMessage("请先选择资料分类"); setBusy(false); return; }
@@ -81,7 +87,7 @@ export function SubmissionForm({ type }: { type: "library" | "exhibition" }) {
     setBusy(false);
   }
 
-  if (signedIn === null) return <div className="system-loading">正在确认成员身份…</div>;
+  if (signedIn === null) return <div className="system-loading">{t("正在确认成员身份…", "Checking membership…")}</div>;
 
   return (
     <form className="submission-form system-form" onSubmit={submit}>
@@ -97,75 +103,75 @@ export function SubmissionForm({ type }: { type: "library" | "exhibition" }) {
             {type === "library" ? (
               <div className="category-toggle-wrap">
                 <button type="button" className={`category-toggle${category ? " has-value" : ""}`} onClick={() => setCategoriesOpen((open) => !open)} aria-expanded={categoriesOpen}>
-                  {category || "选择分类"} <span aria-hidden="true">▾</span>
+                  {category || t("选择分类", "Choose category")} <span aria-hidden="true">▾</span>
                 </button>
                 {categoriesOpen ? (
                   <div className="category-popover">
-                    {LIBRARY_CATEGORIES.map((item) => (
-                      <button type="button" key={item} className={category === item ? "active" : ""} onClick={() => { setCategory(item); setCategoriesOpen(false); }}>{item}</button>
+                    {LIBRARY_CATEGORIES.map(([value, labelEn]) => (
+                      <button type="button" key={value} className={category === value ? "active" : ""} onClick={() => { setCategory(value); setCategoriesOpen(false); }}>{t(value, labelEn)}</button>
                     ))}
                   </div>
                 ) : null}
               </div>
             ) : null}
 
-            <label>{type === "library" ? "标题" : "展览标题"}<input name="title" value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={140} placeholder={type === "library" ? "给这份资料起个标题" : "展览名称"} /></label>
-            <label>简短介绍<textarea name="summary" value={summary} onChange={(event) => setSummary(event.target.value)} required rows={3} maxLength={320} placeholder="一句话说明这是什么" /></label>
+            <label>{type === "library" ? t("标题", "Title") : t("展览标题", "Exhibition title")}<input name="title" value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={140} placeholder={type === "library" ? t("给这份资料起个标题", "Name this archive entry") : t("展览名称", "Exhibition name")} /></label>
+            <label>{t("简短介绍", "Short introduction")}<textarea name="summary" value={summary} onChange={(event) => setSummary(event.target.value)} required rows={3} maxLength={320} placeholder={t("一句话说明这是什么", "Explain what this is in one sentence")} /></label>
 
             <div className="body-field">
-              <span className="body-field-label">正文</span>
+              <span className="body-field-label">{t("正文", "Body")}</span>
               <EditorCanvas />
             </div>
 
             {/* 移动端右侧面板隐藏，此处保留封面上传入口（桌面端入口在封面预览下方） */}
             <div className="cover-upload-mobile">
-              <button type="button" className="cover-upload-button" onClick={() => fileRef.current?.click()}>{file ? "更换封面" : "上传封面"}</button>
+              <button type="button" className="cover-upload-button" onClick={() => fileRef.current?.click()}>{file ? t("更换封面", "Replace cover") : t("上传封面", "Upload cover")}</button>
               {file ? <span className="cover-upload-name">{file.name}</span> : null}
             </div>
-            <label>{type === "library" ? "资料来源链接" : "独立展厅网址"}<input name="sourceUrl" value={url} onChange={(event) => setUrl(event.target.value)} type="url" placeholder="https://" /></label>
+            <label>{type === "library" ? t("资料来源链接", "Source URL") : t("独立展厅网址", "Independent exhibition URL")}<input name="sourceUrl" value={url} onChange={(event) => setUrl(event.target.value)} type="url" placeholder="https://" /></label>
 
-            <button type="submit" disabled={busy}>{busy ? "正在提交…" : signedIn ? "提交审核" : "登录后提交"}</button>
-            {!signedIn ? <p className="form-hint">可以先填写内容，提交时会带你登录，文字内容不会丢失。</p> : null}
-            {message ? <p className={`form-message${message.includes("成功") ? " success" : ""}`} aria-live="polite">{message}</p> : null}
+            <button type="submit" disabled={busy}>{busy ? t("正在提交…", "Submitting…") : signedIn ? t("提交审核", "Submit for review") : t("登录后提交", "Log in to submit")}</button>
+            {!signedIn ? <p className="form-hint">{t("可以先填写内容，提交时会带你登录，文字内容不会丢失。", "Start writing now. You will be asked to log in when submitting, and your draft will be kept.")}</p> : null}
+            {message ? <p className={`form-message${message.includes("成功") ? " success" : ""}`} aria-live="polite">{translateMessage(message)}</p> : null}
           </div>
 
           <div className="workspace-side">
             <div className="cover-preview">
-              <p className="cover-preview-label">封面预览</p>
+              <p className="cover-preview-label">{t("封面预览", "Cover preview")}</p>
               {type === "library" ? (
                 <article className="library-card cover-preview-card">
                   <div className="cover-preview-art" style={coverPreviewUrl ? undefined : { background: content.background }}>
                     {coverPreviewUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img className="cover-preview-art-img" src={coverPreviewUrl} alt="封面预览" />
+                      <img className="cover-preview-art-img" src={coverPreviewUrl} alt={t("封面预览", "Cover preview")} />
                     ) : null}
                     <div className="cover-preview-scrim" aria-hidden="true" />
                   </div>
-                  <div className="card-top"><span>预览</span><span>{category || "未选分类"}</span></div>
-                  <h2>{title.trim() || "标题将显示在这里"}</h2>
-                  <p className={summary.trim() ? "" : "empty"}>{summary.trim() || "简短介绍将显示在这里"}</p>
-                  <small>你 · 审核通过后展示</small>
+                  <div className="card-top"><span>{t("预览", "Preview")}</span><span>{category || t("未选分类", "No category")}</span></div>
+                  <h2>{title.trim() || t("标题将显示在这里", "Your title will appear here")}</h2>
+                  <p className={summary.trim() ? "" : "empty"}>{summary.trim() || t("简短介绍将显示在这里", "Your short introduction will appear here")}</p>
+                  <small>{t("你 · 审核通过后展示", "You · Visible after approval")}</small>
                 </article>
               ) : (
                 <article className="cover-preview-card cover-preview-exhibition">
                   <div className="cover-preview-art">
                     {coverPreviewUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img className="cover-preview-art-img" src={coverPreviewUrl} alt="展览封面预览" />
-                    ) : <span className="cover-preview-empty-hint">选择封面后在此预览</span>}
+                      <img className="cover-preview-art-img" src={coverPreviewUrl} alt={t("展览封面预览", "Exhibition cover preview")} />
+                    ) : <span className="cover-preview-empty-hint">{t("选择封面后在此预览", "Choose a cover to preview it here")}</span>}
                     {coverPreviewUrl ? <div className="cover-preview-scrim" aria-hidden="true" /> : null}
                   </div>
-                  <p className="eyebrow">EXHIBITION · 展览</p>
-                  <h2>{title.trim() || "展览标题将显示在这里"}</h2>
-                  <p className={summary.trim() ? "" : "empty"}>{summary.trim() || "一句话说明将显示在这里"}</p>
-                  <small>你 · 审核通过后展示</small>
+                  <p className="eyebrow">EXHIBITION · {t("展览", "PREVIEW")}</p>
+                  <h2>{title.trim() || t("展览标题将显示在这里", "Your exhibition title will appear here")}</h2>
+                  <p className={summary.trim() ? "" : "empty"}>{summary.trim() || t("一句话说明将显示在这里", "Your one-line introduction will appear here")}</p>
+                  <small>{t("你 · 审核通过后展示", "You · Visible after approval")}</small>
                 </article>
               )}
               <div className="cover-preview-upload">
-                <button type="button" className="cover-upload-button" onClick={() => fileRef.current?.click()}>{file ? "更换封面" : "上传封面"}</button>
-                <span className="cover-upload-name">{file ? file.name : "图片格式，选填"}</span>
+                <button type="button" className="cover-upload-button" onClick={() => fileRef.current?.click()}>{file ? t("更换封面", "Replace cover") : t("上传封面", "Upload cover")}</button>
+                <span className="cover-upload-name">{file ? file.name : t("图片格式，选填", "Image, optional")}</span>
               </div>
-              <p className="cover-preview-hint">{type === "library" ? "封面是卡片底层，标题与简介叠在上方；未上传封面时使用画布背景色。审核通过后，这份资料会以这张卡片出现在资料库中。" : "封面是卡片底层，标题与简介叠在上方。审核通过后，展览会以这张封面出现在展厅列表中。"}</p>
+              <p className="cover-preview-hint">{type === "library" ? t("封面是卡片底层，标题与简介叠在上方；未上传封面时使用画布背景色。审核通过后，这份资料会以这张卡片出现在资料库中。", "The cover sits behind the title and introduction. Without one, the canvas color is used. Once approved, this card appears in the archive.") : t("封面是卡片底层，标题与简介叠在上方。审核通过后，展览会以这张封面出现在展厅列表中。", "The cover sits behind the title and introduction. Once approved, it appears in the exhibition list.")}</p>
             </div>
           </div>
         </div>

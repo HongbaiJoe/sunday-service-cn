@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- user-uploaded media can be served from arbitrary configured storage */
+
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -10,7 +12,8 @@ import FontFamily from "@tiptap/extension-font-family";
 import Placeholder from "@tiptap/extension-placeholder";
 import { FontSize } from "../lib/tiptap-font-size";
 import { uploadMedia } from "../lib/client-upload";
-import { DEFAULT_ARTICLE_BACKGROUND, type ArticleContent, type FloatBlock } from "../lib/blocks";
+import { useLocale } from "./locale-provider";
+import { type ArticleContent, type FloatBlock } from "../lib/blocks";
 
 /** 阻止按钮抢占焦点/清除选区（桌面 + 触屏都有效）。 */
 function keepFocus(event: React.PointerEvent | React.MouseEvent) {
@@ -142,6 +145,7 @@ function useEditorContext(): EditorContextValue {
 
 /** 容器：创建 TipTap 编辑器并提供 context，children 里可自由摆放工具栏与画布。 */
 export function RichEditor({ value, onChange, children }: { value: ArticleContent; onChange: (content: ArticleContent) => void; children: ReactNode }) {
+  const { locale } = useLocale();
   const [content, setContent] = useState<ArticleContent>(value);
 
   const contentRef = useRef<ArticleContent>(value);
@@ -159,7 +163,7 @@ export function RichEditor({ value, onChange, children }: { value: ArticleConten
       Color,
       FontFamily,
       FontSize,
-      Placeholder.configure({ placeholder: "在这里编辑正文……" }),
+      Placeholder.configure({ placeholder: locale === "zh" ? "在这里编辑正文……" : "Write the body here…" }),
     ],
     content: value.html,
     onUpdate: ({ editor }) => {
@@ -173,6 +177,13 @@ export function RichEditor({ value, onChange, children }: { value: ArticleConten
       onChange(next);
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    const placeholder = editor.extensionManager.extensions.find((extension) => extension.name === "placeholder");
+    if (placeholder) placeholder.options.placeholder = locale === "zh" ? "在这里编辑正文……" : "Write the body here…";
+    editor.view.dispatch(editor.state.tr);
+  }, [editor, locale]);
 
   function update(partial: Partial<ArticleContent>) {
     const next = { ...contentRef.current, ...partial };
@@ -202,6 +213,7 @@ export function RichEditor({ value, onChange, children }: { value: ArticleConten
 
 /** 工具栏（放在页面左侧功能区）。 */
 export function EditorToolbar() {
+  const { t, translateMessage } = useLocale();
   const { editor, content, update, insertFile } = useEditorContext();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -254,61 +266,61 @@ export function EditorToolbar() {
   }
 
   return (
-    <div className="rich-toolbar" role="toolbar" aria-label="正文格式" onPointerDown={(event) => { const target = event.target as HTMLElement; if (target.closest("input, select")) return; event.preventDefault(); }} onMouseDown={(event) => { const tag = (event.target as HTMLElement).tagName; if (tag !== "SELECT" && tag !== "INPUT") event.preventDefault(); }}>
+    <div className="rich-toolbar" role="toolbar" aria-label={t("正文格式", "Body formatting")} onPointerDown={(event) => { const target = event.target as HTMLElement; if (target.closest("input, select")) return; event.preventDefault(); }} onMouseDown={(event) => { const tag = (event.target as HTMLElement).tagName; if (tag !== "SELECT" && tag !== "INPUT") event.preventDefault(); }}>
       <div className="tool-group">
-        <span className="tool-label">字体</span>
-        <ToolDropdown label="字体" options={FONT_OPTIONS} getActiveValue={() => getTextStyleAttr("fontFamily")} onApply={(value) => applyTextStyle("fontFamily", value)} />
+        <span className="tool-label">{t("字体", "Font")}</span>
+        <ToolDropdown label={t("字体", "Font")} options={FONT_OPTIONS.map((option, index) => index === 0 ? { ...option, label: t("默认字体", "Default font") } : option)} getActiveValue={() => getTextStyleAttr("fontFamily")} onApply={(value) => applyTextStyle("fontFamily", value)} />
       </div>
       <div className="tool-group">
-        <span className="tool-label">字号</span>
-        <ToolDropdown label="字号" options={SIZE_OPTIONS} getActiveValue={() => getTextStyleAttr("fontSize")} onApply={(value) => applyTextStyle("fontSize", value)} />
+        <span className="tool-label">{t("字号", "Size")}</span>
+        <ToolDropdown label={t("字号", "Size")} options={SIZE_OPTIONS.map((option, index) => index === 0 ? { ...option, label: t("默认", "Default") } : option)} getActiveValue={() => getTextStyleAttr("fontSize")} onApply={(value) => applyTextStyle("fontSize", value)} />
       </div>
       <div className="tool-group">
-        <span className="tool-label">文字颜色</span>
+        <span className="tool-label">{t("文字颜色", "Text color")}</span>
         <div className="tool-row">
-          {TEXT_COLORS.map((color) => <button key={color} type="button" className={`color-dot${editor.isActive("textStyle", { color }) ? " active" : ""}`} style={{ background: color }} onClick={() => editor.chain().focus().setColor(color).run()} aria-label={`文字颜色 ${color}`} />)}
-          <button type="button" className="color-picker-swatch" onPointerDown={(event) => { keepFocus(event); saveSelection(); }} onMouseDown={keepFocus} onClick={() => colorPickerRef.current?.click()} title="自定义文字颜色" aria-label="自定义文字颜色"><span aria-hidden="true" /></button>
-          <input ref={colorPickerRef} type="color" className="color-picker-input" onPointerDown={saveSelection} onChange={(event) => runOnSelection((chain) => chain.setColor(event.target.value))} tabIndex={-1} aria-hidden="true" title="自定义文字颜色" />
+          {TEXT_COLORS.map((color) => <button key={color} type="button" className={`color-dot${editor.isActive("textStyle", { color }) ? " active" : ""}`} style={{ background: color }} onClick={() => editor.chain().focus().setColor(color).run()} aria-label={`${t("文字颜色", "Text color")} ${color}`} />)}
+          <button type="button" className="color-picker-swatch" onPointerDown={(event) => { keepFocus(event); saveSelection(); }} onMouseDown={keepFocus} onClick={() => colorPickerRef.current?.click()} title={t("自定义文字颜色", "Custom text color")} aria-label={t("自定义文字颜色", "Custom text color")}><span aria-hidden="true" /></button>
+          <input ref={colorPickerRef} type="color" className="color-picker-input" onPointerDown={saveSelection} onChange={(event) => runOnSelection((chain) => chain.setColor(event.target.value))} tabIndex={-1} aria-hidden="true" title={t("自定义文字颜色", "Custom text color")} />
         </div>
       </div>
       <div className="tool-group">
-        <span className="tool-label">字体样式</span>
+        <span className="tool-label">{t("字体样式", "Text style")}</span>
         <div className="tool-row">
-          <button type="button" className={editor.isActive("bold") ? "active" : ""} onClick={() => editor.chain().focus().toggleBold().run()} title="加粗" aria-pressed={editor.isActive("bold")}>B</button>
-          <button type="button" className={editor.isActive("italic") ? "active" : ""} onClick={() => editor.chain().focus().toggleItalic().run()} title="斜体" aria-pressed={editor.isActive("italic")}>I</button>
-          <button type="button" className={editor.isActive("underline") ? "active" : ""} onClick={() => editor.chain().focus().toggleUnderline().run()} title="下划线" aria-pressed={editor.isActive("underline")}>U</button>
+          <button type="button" className={editor.isActive("bold") ? "active" : ""} onClick={() => editor.chain().focus().toggleBold().run()} title={t("加粗", "Bold")} aria-pressed={editor.isActive("bold")}>B</button>
+          <button type="button" className={editor.isActive("italic") ? "active" : ""} onClick={() => editor.chain().focus().toggleItalic().run()} title={t("斜体", "Italic")} aria-pressed={editor.isActive("italic")}>I</button>
+          <button type="button" className={editor.isActive("underline") ? "active" : ""} onClick={() => editor.chain().focus().toggleUnderline().run()} title={t("下划线", "Underline")} aria-pressed={editor.isActive("underline")}>U</button>
         </div>
       </div>
       <div className="tool-group">
-        <span className="tool-label">标题层级</span>
+        <span className="tool-label">{t("标题层级", "Heading level")}</span>
         <div className="tool-row">
-          <button type="button" className={editor.isActive("heading", { level: 2 }) ? "active" : ""} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="二级标题" aria-pressed={editor.isActive("heading", { level: 2 })}>H2</button>
-          <button type="button" className={editor.isActive("heading", { level: 3 }) ? "active" : ""} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="三级标题" aria-pressed={editor.isActive("heading", { level: 3 })}>H3</button>
+          <button type="button" className={editor.isActive("heading", { level: 2 }) ? "active" : ""} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title={t("二级标题", "Heading 2")} aria-pressed={editor.isActive("heading", { level: 2 })}>H2</button>
+          <button type="button" className={editor.isActive("heading", { level: 3 }) ? "active" : ""} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title={t("三级标题", "Heading 3")} aria-pressed={editor.isActive("heading", { level: 3 })}>H3</button>
         </div>
       </div>
       <div className="tool-group">
-        <span className="tool-label">对齐</span>
+        <span className="tool-label">{t("对齐", "Alignment")}</span>
         <div className="tool-row">
-          <button type="button" className={editor.isActive({ textAlign: "left" }) ? "active" : ""} onClick={() => editor.chain().focus().setTextAlign("left").run()} title="左对齐" aria-pressed={editor.isActive({ textAlign: "left" })}>左</button>
-          <button type="button" className={editor.isActive({ textAlign: "center" }) ? "active" : ""} onClick={() => editor.chain().focus().setTextAlign("center").run()} title="居中" aria-pressed={editor.isActive({ textAlign: "center" })}>中</button>
-          <button type="button" className={editor.isActive({ textAlign: "right" }) ? "active" : ""} onClick={() => editor.chain().focus().setTextAlign("right").run()} title="右对齐" aria-pressed={editor.isActive({ textAlign: "right" })}>右</button>
+          <button type="button" className={editor.isActive({ textAlign: "left" }) ? "active" : ""} onClick={() => editor.chain().focus().setTextAlign("left").run()} title={t("左对齐", "Align left")} aria-pressed={editor.isActive({ textAlign: "left" })}>{t("左", "L")}</button>
+          <button type="button" className={editor.isActive({ textAlign: "center" }) ? "active" : ""} onClick={() => editor.chain().focus().setTextAlign("center").run()} title={t("居中", "Center")} aria-pressed={editor.isActive({ textAlign: "center" })}>{t("中", "C")}</button>
+          <button type="button" className={editor.isActive({ textAlign: "right" }) ? "active" : ""} onClick={() => editor.chain().focus().setTextAlign("right").run()} title={t("右对齐", "Align right")} aria-pressed={editor.isActive({ textAlign: "right" })}>{t("右", "R")}</button>
         </div>
       </div>
       <div className="tool-group">
-        <span className="tool-label">背景色</span>
+        <span className="tool-label">{t("背景色", "Background")}</span>
         <div className="tool-row">
-          {BG_COLORS.map((color) => <button key={color} type="button" className={`color-dot bg-dot${content.background === color ? " active" : ""}`} style={{ background: color }} onClick={() => update({ background: color })} aria-label={`背景色 ${color}`} />)}
-          <button type="button" className="color-picker-swatch" onPointerDown={keepFocus} onMouseDown={keepFocus} onClick={() => bgColorPickerRef.current?.click()} title="自定义背景色" aria-label="自定义背景色"><span aria-hidden="true" /></button>
-          <input ref={bgColorPickerRef} type="color" className="color-picker-input" value={content.background} onChange={(event) => update({ background: event.target.value })} tabIndex={-1} aria-hidden="true" title="自定义背景色" />
+          {BG_COLORS.map((color) => <button key={color} type="button" className={`color-dot bg-dot${content.background === color ? " active" : ""}`} style={{ background: color }} onClick={() => update({ background: color })} aria-label={`${t("背景色", "Background color")} ${color}`} />)}
+          <button type="button" className="color-picker-swatch" onPointerDown={keepFocus} onMouseDown={keepFocus} onClick={() => bgColorPickerRef.current?.click()} title={t("自定义背景色", "Custom background color")} aria-label={t("自定义背景色", "Custom background color")}><span aria-hidden="true" /></button>
+          <input ref={bgColorPickerRef} type="color" className="color-picker-input" value={content.background} onChange={(event) => update({ background: event.target.value })} tabIndex={-1} aria-hidden="true" title={t("自定义背景色", "Custom background color")} />
         </div>
       </div>
       <div className="tool-group">
-        <span className="tool-label">插入媒体</span>
+        <span className="tool-label">{t("插入媒体", "Insert media")}</span>
         <div className="tool-col">
-          <button type="button" onClick={() => imageInputRef.current?.click()}>图片</button>
-          <button type="button" onClick={() => videoInputRef.current?.click()}>视频</button>
-          <button type="button" onClick={() => audioInputRef.current?.click()}>音频</button>
-          {mediaError ? <span className="tool-error">{mediaError}</span> : null}
+          <button type="button" onClick={() => imageInputRef.current?.click()}>{t("图片", "Image")}</button>
+          <button type="button" onClick={() => videoInputRef.current?.click()}>{t("视频", "Video")}</button>
+          <button type="button" onClick={() => audioInputRef.current?.click()}>{t("音频", "Audio")}</button>
+          {mediaError ? <span className="tool-error">{translateMessage(mediaError)}</span> : null}
         </div>
       </div>
       <input ref={imageInputRef} type="file" accept="image/*" className="tool-file-input" tabIndex={-1} aria-hidden="true" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void insertWithFeedback("image", file); }} />
@@ -340,6 +352,7 @@ function FloatLayer({ floats, onChange }: { floats: FloatBlock[]; onChange: (flo
 }
 
 function FloatItem({ block, onUpdate, onRemove }: { block: FloatBlock; onUpdate: (block: FloatBlock) => void; onRemove: () => void }) {
+  const { t } = useLocale();
   const [drag, setDrag] = useState<null | { mode: "move" | "resize"; startX: number; startY: number; orig: FloatBlock; width: number }>(null);
 
   function start(event: React.PointerEvent, mode: "move" | "resize") {
@@ -382,7 +395,7 @@ function FloatItem({ block, onUpdate, onRemove }: { block: FloatBlock; onUpdate:
       onPointerDown={(event) => start(event, "move")}
     >
       {block.type === "image" ? <img src={block.src} alt="" draggable={false} /> : block.type === "video" ? <video src={block.src} controls preload="metadata" /> : <audio src={block.src} controls />}
-      <button type="button" className="float-remove" onClick={onRemove} aria-label="删除">×</button>
+      <button type="button" className="float-remove" onClick={onRemove} aria-label={t("删除", "Remove")}>×</button>
       <span className="float-resize" onPointerDown={(event) => start(event, "resize")} aria-hidden="true" />
     </div>
   );

@@ -3,10 +3,13 @@ import Link from "next/link";
 import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
 import { getSiteAssets } from "../../lib/site-assets";
+import { notFound } from "next/navigation";
+import { COMMUNITY_ENABLED } from "../../lib/features";
 
 export const metadata = { title: "Kendrick Lamar 专辑排序" };
 
 export default async function PostPage() {
+  if (!COMMUNITY_ENABLED) notFound();
   const assets = await getSiteAssets();
   return (
     <main>

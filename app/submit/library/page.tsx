@@ -2,6 +2,7 @@ import { SiteFooter } from "../../components/site-footer";
 import { SiteHeader } from "../../components/site-header";
 import { SubmissionForm } from "../../components/submission-form";
 import { getSiteAssets } from "../../lib/site-assets";
+import { LocalizedText } from "../../components/locale-provider";
 
 export const metadata = { title: "提交资料" };
 
@@ -18,7 +19,7 @@ export default async function SubmitLibraryPage() {
           ...(bgUrl ? { backgroundImage: `url(${bgUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
         }}
       >
-        <h1>提交一份<br />音乐资料</h1>
+        <LocalizedText as="h1" className="localized-lines" zh={"提交一份\n音乐资料"} en={"SUBMIT A\nMUSIC ENTRY"} />
       </section>
       <SubmissionForm type="library" />
       <SiteFooter />
