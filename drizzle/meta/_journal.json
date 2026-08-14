@@ -15,6 +15,13 @@
       "when": 1786371486621,
       "tag": "0001_smooth_thaddeus_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786705234873,
+      "tag": "0002_yellow_marrow",
+      "breakpoints": true
     }
   ]
 }

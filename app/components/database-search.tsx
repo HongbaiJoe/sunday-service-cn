@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "./locale-provider";
 
 /** 资料库搜索框（放在资料库标题右侧，通过 URL ?q= 与列表联动）。 */
 export function DatabaseSearch() {
+  const { t } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get("q") ?? "";
@@ -23,11 +25,11 @@ export function DatabaseSearch() {
             const qs = params.toString();
             router.replace(qs ? `/database?${qs}` : "/database", { scroll: false });
           }}
-          placeholder="搜索歌曲、人物、流派、课程…"
-          aria-label="搜索资料库"
+          placeholder={t("搜索歌曲、人物、流派、课程…", "Search songs, artists, genres, courses…")}
+          aria-label={t("搜索资料库", "Search the archive")}
         />
       </div>
-      <Link className="submit-inline" href="/submit/library">＋ 提交资料</Link>
+      <Link className="submit-inline" href="/submit/library">＋ {t("提交资料", "Submit")}</Link>
     </div>
   );
 }

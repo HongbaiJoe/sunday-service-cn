@@ -8,7 +8,7 @@ import { CONTENT_MAX_PER_WINDOW, CONTENT_WINDOW_MS, rateLimitAllow } from "../..
 export async function GET() {
   try {
     await ensureDatabase();
-    const result = await getD1().prepare(`SELECT posts.id, posts.title, posts.body, posts.tags, posts.media_url AS mediaUrl, posts.created_at AS createdAt, users.display_name AS author, users.username, COUNT(comments.id) AS commentCount FROM posts JOIN users ON users.id = posts.author_id LEFT JOIN comments ON comments.post_id = posts.id AND comments.status = 'published' WHERE posts.status = 'published' GROUP BY posts.id ORDER BY posts.created_at DESC LIMIT 50`).all();
+    const result = await getD1().prepare(`SELECT posts.id, posts.title, posts.body, posts.tags, posts.title_en AS titleEn, posts.body_en AS bodyEn, posts.tags_en AS tagsEn, posts.media_url AS mediaUrl, posts.created_at AS createdAt, users.display_name AS author, users.username, COUNT(comments.id) AS commentCount FROM posts JOIN users ON users.id = posts.author_id LEFT JOIN comments ON comments.post_id = posts.id AND comments.status = 'published' WHERE posts.status = 'published' GROUP BY posts.id ORDER BY posts.created_at DESC LIMIT 50`).all();
     return json({ posts: result.results });
   } catch (error) { return inputErrorResponse(error); }
 }

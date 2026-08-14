@@ -23,11 +23,11 @@ export async function ensureDatabase() {
 async function initialize(db: D1Database) {
   const statements = [
     `CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, phone TEXT, phone_verified_at TEXT, display_name TEXT NOT NULL, username TEXT NOT NULL UNIQUE, bio TEXT NOT NULL DEFAULT '', avatar_url TEXT, password_hash TEXT, role TEXT NOT NULL DEFAULT 'member', status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-    `CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, author_id TEXT NOT NULL REFERENCES users(id), title TEXT NOT NULL, body TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '', media_url TEXT, status TEXT NOT NULL DEFAULT 'published', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-    `CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, post_id TEXT NOT NULL REFERENCES posts(id), author_id TEXT NOT NULL REFERENCES users(id), body TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'published', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, author_id TEXT NOT NULL REFERENCES users(id), title TEXT NOT NULL, body TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '', title_en TEXT, body_en TEXT, tags_en TEXT, media_url TEXT, status TEXT NOT NULL DEFAULT 'published', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, post_id TEXT NOT NULL REFERENCES posts(id), author_id TEXT NOT NULL REFERENCES users(id), body TEXT NOT NULL, body_en TEXT, status TEXT NOT NULL DEFAULT 'published', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS media_assets (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id), storage_key TEXT NOT NULL UNIQUE, filename TEXT NOT NULL, content_type TEXT NOT NULL, size INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-    `CREATE TABLE IF NOT EXISTS library_entries (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id), category TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, body TEXT NOT NULL, source_url TEXT, media_url TEXT, status TEXT NOT NULL DEFAULT 'pending', reviewer_note TEXT NOT NULL DEFAULT '', reviewed_by TEXT REFERENCES users(id), reviewed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
-    `CREATE TABLE IF NOT EXISTS exhibitions (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id), title TEXT NOT NULL, summary TEXT NOT NULL, curatorial_statement TEXT NOT NULL, external_url TEXT, cover_url TEXT, status TEXT NOT NULL DEFAULT 'pending', reviewer_note TEXT NOT NULL DEFAULT '', reviewed_by TEXT REFERENCES users(id), reviewed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS library_entries (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id), category TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL, body TEXT NOT NULL, category_en TEXT, title_en TEXT, summary_en TEXT, body_en TEXT, source_url TEXT, media_url TEXT, status TEXT NOT NULL DEFAULT 'pending', reviewer_note TEXT NOT NULL DEFAULT '', reviewed_by TEXT REFERENCES users(id), reviewed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS exhibitions (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id), title TEXT NOT NULL, summary TEXT NOT NULL, curatorial_statement TEXT NOT NULL, title_en TEXT, summary_en TEXT, curatorial_statement_en TEXT, external_url TEXT, cover_url TEXT, status TEXT NOT NULL DEFAULT 'pending', reviewer_note TEXT NOT NULL DEFAULT '', reviewed_by TEXT REFERENCES users(id), reviewed_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS admin_actions (id TEXT PRIMARY KEY, admin_id TEXT NOT NULL REFERENCES users(id), entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, action TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS sms_codes (id TEXT PRIMARY KEY, phone TEXT, email TEXT, channel TEXT NOT NULL DEFAULT 'phone', code TEXT NOT NULL, expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, expires_at TEXT NOT NULL, last_seen_at TEXT)`,
@@ -49,6 +49,7 @@ async function initialize(db: D1Database) {
   await ensureUserProfileColumns(db);
   await ensureSmsCodeColumns(db);
   await ensureContentBlocksColumns(db);
+  await ensureTranslationColumns(db);
   await db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS users_phone_unique_idx ON users(phone)").run();
 
   // 本地开发播种：仅在非生产环境写入，且一律 member 角色，绝不创建内置管理员。
@@ -62,6 +63,29 @@ async function initialize(db: D1Database) {
       db.prepare(`INSERT OR IGNORE INTO library_entries (id,owner_id,category,title,summary,body,status) VALUES ('seed-yandhi','seed-editor','档案','Yandhi：未发行版本与时间线','整理公开流传版本、录音时间线与相关资料来源。','仅收录可公开引用的资料说明。','approved')`),
       db.prepare(`INSERT OR IGNORE INTO exhibitions (id,owner_id,title,summary,curatorial_statement,external_url,status) VALUES ('seed-pablo-king','seed-editor','从 The Life of Pablo 到 Jesus Is King','歌词、采样与福音叙事的对照研究','通过两个时期的作品观察 Kanye West 对信仰、家庭和公共表达的处理。','https://example.com/exhibition/pablo-king','approved')`),
     ]);
+    await db.batch([
+      db.prepare(`UPDATE posts SET title_en = 'How would you rank Kendrick Lamar''s five studio albums?', body_en = 'A new ranking based on narrative, production and replay value. Share your list and reasoning.', tags_en = 'Kendrick Lamar,Album discussion' WHERE id = 'seed-kendrick'`),
+      db.prepare(`UPDATE posts SET title_en = 'Putting Gospel and Jersey Club in the same track for the first time', body_en = 'This is a 90-second version. I would love feedback on the drums and vocal space.', tags_en = 'Original work,Demo' WHERE id = 'seed-gospel-club'`),
+      db.prepare(`UPDATE library_entries SET category_en = 'Courses', title_en = 'Gospel Choir: Parts, Rhythm and Performance', summary_en = 'Understand choir arrangement through the relationship between soprano, alto and tenor.', body_en = 'An editorial course containing six introductory chapters.' WHERE id = 'seed-choir'`),
+      db.prepare(`UPDATE library_entries SET category_en = 'Archives', title_en = 'Yandhi: Unreleased Versions and Timeline', summary_en = 'A guide to publicly circulated versions, recording timelines and related sources.', body_en = 'Only material that can be cited publicly is included.' WHERE id = 'seed-yandhi'`),
+      db.prepare(`UPDATE exhibitions SET title_en = 'From The Life of Pablo to Jesus Is King', summary_en = 'A comparative study of lyrics, samples and gospel narratives.', curatorial_statement_en = 'A study of how Kanye West approached faith, family and public expression across two creative periods.' WHERE id = 'seed-pablo-king'`),
+    ]);
+  }
+}
+
+async function ensureTranslationColumns(db: D1Database) {
+  const specs = {
+    posts: [["title_en", "TEXT"], ["body_en", "TEXT"], ["tags_en", "TEXT"]],
+    comments: [["body_en", "TEXT"]],
+    library_entries: [["category_en", "TEXT"], ["title_en", "TEXT"], ["summary_en", "TEXT"], ["body_en", "TEXT"]],
+    exhibitions: [["title_en", "TEXT"], ["summary_en", "TEXT"], ["curatorial_statement_en", "TEXT"]],
+  } as const;
+  for (const [table, additions] of Object.entries(specs)) {
+    const info = await db.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+    const columns = new Set(info.results.map((column) => column.name));
+    for (const [name, type] of additions) {
+      if (!columns.has(name)) await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`).run();
+    }
   }
 }
 

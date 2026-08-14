@@ -1,8 +1,12 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element -- the editable hero asset is supplied by the site asset system */
+
 import { useRef } from "react";
+import { useLocale } from "./locale-provider";
 
 export function InteractiveHero({ heroUrl }: { heroUrl: string }) {
+  const { t } = useLocale();
   const heroRef = useRef<HTMLElement>(null);
 
   function moveTitle(event: React.PointerEvent<HTMLElement>) {
@@ -31,8 +35,8 @@ export function InteractiveHero({ heroUrl }: { heroUrl: string }) {
         <span className="hero-line hero-line-one">SUNDAY</span>
         <span className="hero-line hero-line-two">SERVICE CN</span>
       </h1>
-      <p className="hero-caption">中国最大的欧美音乐社群</p>
-      <a className="scroll-cue" href="#latest" aria-label="向下浏览">
+      <p className="hero-caption">{t("中国最大的欧美音乐社群", "China's largest Western music community")}</p>
+      <a className="scroll-cue" href="#latest" aria-label={t("向下浏览", "Scroll down")}>
         <span>SCROLL</span>
         <span aria-hidden="true">↓</span>
       </a>

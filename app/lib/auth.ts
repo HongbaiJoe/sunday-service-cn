@@ -90,7 +90,9 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     const id = crypto.randomUUID();
     const base = identity.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 24) || "member";
     const username = `${base}-${id.slice(0, 6)}`;
-    await db.prepare("INSERT INTO users (id,email,phone,display_name,username,role) VALUES (?,?,?,?,?,?)")
+    // Header, page and API requests can resolve the same first-time identity concurrently.
+    // Keep creation idempotent so the unique email constraint does not surface as a runtime error.
+    await db.prepare("INSERT OR IGNORE INTO users (id,email,phone,display_name,username,role) VALUES (?,?,?,?,?,?)")
       .bind(id, identity.email, "phone" in identity ? identity.phone || null : null, identity.displayName, username, identity.role).run();
   } else {
     const allowlist = (process.env.ADMIN_EMAILS ?? "").split(",").map((item) => item.trim().toLowerCase());

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   try {
     await ensureDatabase();
     const category = new URL(request.url).searchParams.get("category");
-    const query = `SELECT library_entries.id, category, title, summary, body, source_url AS sourceUrl, media_url AS mediaUrl, library_entries.updated_at AS updatedAt, users.display_name AS author FROM library_entries JOIN users ON users.id = library_entries.owner_id WHERE library_entries.status = 'approved'${category ? " AND category = ?" : ""} ORDER BY library_entries.updated_at DESC`;
+    const query = `SELECT library_entries.id, category, title, summary, body, category_en AS categoryEn, title_en AS titleEn, summary_en AS summaryEn, body_en AS bodyEn, source_url AS sourceUrl, media_url AS mediaUrl, library_entries.updated_at AS updatedAt, users.display_name AS author FROM library_entries JOIN users ON users.id = library_entries.owner_id WHERE library_entries.status = 'approved'${category ? " AND category = ?" : ""} ORDER BY library_entries.updated_at DESC`;
     const statement = getD1().prepare(query);
     const result = category ? await statement.bind(category).all() : await statement.all();
     return json({ entries: result.results });
